@@ -500,9 +500,9 @@ How quicly do input distributions change?
 
 
 
-# Reading Materials
+# Suggested Reading Materials
 
-## Machine Learning in Production
+## Machine Learning in Production (Evidently.AI)
 
 [Machine Learning in Production: Why You Should Care About Data and Concept Drift](https://towardsdatascience.com/machine-learning-in-production-why-you-should-care-about-data-and-concept-drift-d96d0bc907fb)
 
@@ -782,12 +782,148 @@ But anyway, what naming scheme is perfert...?
     * increase frequency of model runs (e.g., from weekly to daily)
   
   
+====================================================================================
+  
+  
+Start: noon
+End: 1240
+Start: 1257
+End: 306
+Start: 440
+End: 
+
   
 ====================================================================================
 
 
 
-Start: noon
-End: 1240
-Start: 1257
-End: 306
+
+# Additional Reading Materials
+
+I liked the suggested article from Evidently.AI, so I opened a few related articles and looked a little more into 
+their open-source data drift tools.
+* Article: [Evidently 0.0.1 Release: Open-Source Tool To Analyze Data Drift](https://evidentlyai.com/blog/evidently-001-open-source-tool-to-analyze-data-drift)
+* GitHub: [https://github.com/evidentlyai/evidently](https://github.com/evidentlyai/evidently)
+
+
+## ML Monitoring: What it is (Evidently.AI)
+[ML Monitoring: What it is and How it Differs](https://evidentlyai.com/blog/machine-learning-monitoring-what-it-is-and-how-it-differs)
+
+
+Most people only know ML up to deployment
+```
+                ________________________________
+               |               |     _______    |
+               V               V    |       V   |
+| Data |__| Feature     |__| Model    |__| Model      |__| Model      |__| ???? |
+| Prep |  | Engineering |  | Training |  | Evaluation |  | Deployment |  | ???? |
+```
+
+
+Why monitoring matters: "An ounce of prevention is worth a pound of cure."
+```             ________________________________
+               |               |     _______    |
+               V               V    |       V   |
+| Data |__| Feature     |__| Model    |__| Model      |__| Model      |__| Model   |
+| Prep |  | Engineering |  | Training |  | Evaluation |  | Deployment |  | Serving |
+                              ^              ^                              |
+                              |______________|______________________________|
+```
+
+**Machine learning monitoring**: a practice of tracking and analyzing production model performance 
+to ensure acceptable quality as defined by the use case. It provides early warnings on performance 
+issues and helps diagnose their root cause to debug and resolve.
+
+* Software Deployment Classics
+  - "A deployed model is a software service, and we need to track the usual health metrics such 
+    as latency, memory utilization, and uptime."
+* ML Deployment Novelties
+  - Data adds an extra layer of complexity: 
+    * "It is not just the code we should worry about, 
+      but also data quality and its dependencies."
+    * "Is the world changing too fast? In machine learning monitoring, this abstract question 
+      becomes applied. We watch out for data shifts and casually quantify the degree of change."
+  - Models often fail silently:
+    * "There are no 'bad gateways' or '404's. Despite the input data being odd, the system will likely return 
+      the response. The individual prediction might seemingly make sense⁠—while being harmful, biased, or wrong."
+  - The distinction between "good" and "bad" is not clear-cut:
+    * "One accidental outlier does not mean the model went rogue and needs an urgent update. At the same 
+      time, stable accuracy can also be misleading. Hiding behind an aggregate number, a model can quietly 
+      fail on some critical data region."
+  - Metrics are useless without context:
+    * "Acceptable performance, model risks, and costs of errors vary across use cases." 
+      - "In lending models, we care about fair outcomes." 
+      - "In fraud detection, we barely tolerate false negatives." 
+      - "With stock replenishment, ordering more might be better than less."
+      -  "In marketing models, we would want to keep tabs on the premium segment performance."
+
+
+
+
+## To retrain, or not to retrain? (Evidently.AI)
+[To retrain, or not to retrain? Let's get analytical about ML model updates](https://evidentlyai.com/blog/retrain-or-not-retrain)
+
+> * Is it time to retrain?
+>   - First, how often should we usually retrain a given model? 
+>     * We can get a ballpark of our retraining needs in advance by looking at the past speed of drift. 
+>   - Second, should we retrain the model now? 
+>     * How is our model doing in the present, and has anything meaningfully changed?
+>   - Third, a bit more nuanced. Should we retrain, or should we update the model? 
+>     * We can simply feed the new data in the old training pipeline. Or review everything, from 
+>       feature engineering to the entire architecture. 
+
+
+
+
+### Part 1: Define the retraining strategy in advance
+**"Model Retraining"**: "Adding new data to the old training pipelines and running them once again."
+
+- Check #1: How much data does the model need?
+- Check #2: How quickly will the quality go down in production?
+- Check #3: How often do you receive the new data?
+  * what comes first: the new data or the model decay?
+    - Say the model decays quicker than new data is reported/collected; solutions:
+      * A cascade of models. 
+        - "Is some data available earlier? E.g. some points of sales might deliver the data before the 
+          end of the month. We can then create several models with different update schedules. "
+      * A hybrid model ensemble. 
+        - "We can combine models of different types to better combat the decay. For example, use 
+          sales statistics and business rules as a baseline and then add machine learning on top 
+          to correct the prediction. Rough rules might perform better towards the end of the period, 
+          which would help maintain the overall performance."
+      * Rebuild the model to make it more stable. 
+        - "Back to training! We might be able to trade some digits of the test performance for slower degradation."
+      * Adjust the expectations. 
+        - "How critical is the model? We might accept reality and just go with it. Just don't forget to communicate 
+          the now-expected performance metrics! The model will not live up to its all-star performance in the first 
+          test week."
+    - If data is reported much faster than model decay, choose your own schedule!
+- Check #4: How often should you retrain?
+  * What is potentially wrong with frequent retraining?
+    - adds complexity
+    - adds costs
+    - can often be error-prone
+- Check #5: Should you drop the old data?
+  * Dropping the old data makes the model worse. 
+    - "Okay, let's keep it all for now!"
+  * Dropping the old data does not affect the quality. 
+    - "Something to consider: we can make the model updates more lightweight. For example, we 
+      can exclude a bucket of older data every time we add a newer one."
+  * Dropping the old data improves the quality! 
+    - "These things happen. Our model forgets the outdated patterns and becomes more relevant. That 
+      is a good thing to know: we operate in a fast-changing world, and the model should not be 
+      too 'conservative'!"
+  * Keep the data for less-represented populations and minor classes. 
+    - "Dropping past data might disproportionately affect the performance of less popular classes. This 
+      is an important thing to control for. You might decide to drop the old data selectively: remove what's 
+      frequent, keep what's rare."
+  * Assign higher weights to the newer data. 
+    - "If the old data makes the model worse, you might decide to downgrade its importance but not exclude it 
+      entirely. If you are feeling creative, you can do that at a different speed for different classes!"
+
+
+### Part 2: Monitor the model performance in action
+
+* Check #1. Monitor the performance changes
+* Check #2. Monitor the shifts in data
+* Part 3. Retraining vs Updates
