@@ -781,7 +781,15 @@ But anyway, what naming scheme is perfert...?
     * shorten the prediction horizon (e.g., from a week to a day)
     * increase frequency of model runs (e.g., from weekly to daily)
   
-  
+
+
+
+# [Monitoring Machine Learning Models in Production (Comprehensive Guide)](https://christophergs.com/machine%20learning/2020/03/14/how-to-monitor-machine-learning-models/)
+
+* [ ] ToDo: Get back to this!
+
+
+
 ====================================================================================
   
   
@@ -791,6 +799,7 @@ Start: 1257
 End: 306
 Start: 440
 End: 
+
 
   
 ====================================================================================
