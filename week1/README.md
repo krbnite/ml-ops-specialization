@@ -495,14 +495,81 @@ How quicly do input distributions change?
 
 
 
+------------------
 
+Start: noon
+End: 1240
 
-----------
+# Reading Materials
 
+## Machine Learning in Production
 
-2h55m so far...
+[Machine Learning in Production: Why You Should Care About Data and Concept Drift](https://towardsdatascience.com/machine-learning-in-production-why-you-should-care-about-data-and-concept-drift-d96d0bc907fb)
 
--------
+* Model Decay
+  - aka: model drift, model staleness
+  - primary gist: "Past performance is no guarantee of future results."
+  - secondary gist: "No model lives forever, but the speed of decay varies."
+  - Changes may be detected in 
+    * model quality/performance metrics 
+      - e.g., accuracy, mean error rate
+    * downstream business KPIs
+      - e.g., click-through rate
+  - Rate of decay is situation/scenario dependent
+    * Years, e.g., a computer vision or language model 
+    * Days, e.g., maybe a stock market model
+    * Domains, e.g., general HAR model on a unique subpopulation (or on an individual basis)
+  - Rule out (differential diagnosis): data quality, system update errors, etc
+* Data Drift
+  - aka: feature drift, population shift, covariate shift
+  - primary gist: the input data has changed (resulting in a meaningfully different distribution of variable)
+  - primary problem: the model is not trained for this new situation!
+    * still works on the old training, val, and test sets (obviously)
+    * possibly even worked for a while in production
+    * however, no longer working well in production
+  - Example (they use advertising, but I'll use human activity recognition (HAR))
+    * HAR model is trained on healthy males aged 15-35
+    * HAR model works well early when company's demographic primarily young adult males
+    * company generalizes product and extends offers to older males 
+    * HAR model's performance seen to drop since the older males move and behave in meaningfully
+      different ways
+    * HAR model is retrained and found to work well again on company's user base
+    * company wants a successful Q3, so begins targeting sales at their untapped demographic - females
+    * HAR model's performance seen to drop again
+    * etc!
+  - Solutions
+    * Retrain the model using a deployment-faithful population
+    * Rebuild the model for the new population segments
+* Training-Serving Skew
+  - aka: Training-Deployment Skew 
+  - note: 
+    * sometimes mixed in with or even called "data drift"
+    * however "skew" refers to an actual mismatch between the training data and the data seen in deployment 
+    * thus, "skew" is not the same phenomenon as "drift" (like that described above)
+    * skew and drift arise from fundamentally different root causes
+  - primary gist: the training/validation population data used to build the model is significantly different 
+    than the population that the model is "served" to (i.e., the deployment population)
+  - common causes: overly simplified training data
+    * e.g., in the HAR work I do, this is the reason we harp on the important distinctions
+      between in-lab data (typically a guided/supervised collection of a small/finite 
+      set of simple, somewhat-artificially "orthogonal" activities that are cleanly/clearly recorded
+      in a setting with little environmental variation, challenge, etc; "closed world") 
+      vs out-in-the-wild data (a nigh-infinite set of
+      typically unguided, composite/co-occurring activities ranging over an array of environmental
+      conditions and settings, recording qualities, etc; "open world")
+  - other examples given in article
+    * invoice classification model
+      - trained on a limited set of crowdsourced invoice images, where
+        the handwriting is very clear/clean, image quality is great, and 
+        people fill out the form blanks in the right spots, etc
+      - deployed on real world data where the handwriting can often be sloppy,
+        the image quality varies greatly, and people do not always fill out
+        the forms so perfectly
+    * Google Health retinopathy classification model
+      - trained on high-quality, well-lit images
+      - deployed on dataset of varying image quality and lighting conditions
+* Concept Drift      
+    
 
 
 
