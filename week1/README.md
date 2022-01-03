@@ -495,10 +495,10 @@ How quicly do input distributions change?
 
 
 
-------------------
 
-Start: noon
-End: 1240
+====================================================================================
+
+
 
 # Reading Materials
 
@@ -520,14 +520,29 @@ End: 1240
     * Days, e.g., maybe a stock market model
     * Domains, e.g., general HAR model on a unique subpopulation (or on an individual basis)
   - Rule out (differential diagnosis): data quality, system update errors, etc
-* Data Drift
+
+### Data Drift (Changes in Feature/Population Distributions)
+* **Data Drift**
   - aka: feature drift, population shift, covariate shift
   - primary gist: the input data has changed (resulting in a meaningfully different distribution of variable)
   - primary problem: the model is not trained for this new situation!
     * still works on the old training, val, and test sets (obviously)
     * possibly even worked for a while in production
     * however, no longer working well in production
-  - Example (they use advertising, but I'll use human activity recognition (HAR))
+  - Example: Advertising Cohorts
+    * company attracts new customers through advertising
+    * company initially attracts customers through "paid search" (I think, e.g., Google search ads)
+    * company builds a model on a cohort of "paid search" records
+    * company starts new ad campaign on Facebook
+    * at first, model still fares pretty well since most clients still coming from paid search
+    * however, as the FB ad campaign goes on, more and more clients start coming from FB
+    * the model's performance dramatically reduces
+    * it is found that the gradual decay in performance is highly correlated with class distribution
+      changes in the feature `source_channel`, as well as related vars such as `device` 
+    * going forward: the company finds similar performance drops when targeting new geographical
+      areas and demographics
+    * **All of this could have been detected early if the company was closely monitoring the model!**
+  - My Own Example: human activity recognition (HAR)
     * HAR model is trained on healthy males aged 15-35
     * HAR model works well early when company's demographic primarily young adult males
     * company generalizes product and extends offers to older males 
@@ -537,10 +552,14 @@ End: 1240
     * company wants a successful Q3, so begins targeting sales at their untapped demographic - females
     * HAR model's performance seen to drop again
     * etc!
+  - Note on Data Quality
+    * sometimes a "data drift" can occur if the incoming data quality changes
+    * example in HAR: sensor degradation
+    * "data quality" issues are most often associated with "training/deployment skew" (see below)
   - Solutions
     * Retrain the model using a deployment-faithful population
     * Rebuild the model for the new population segments
-* Training-Serving Skew
+* **Training-Serving Skew**
   - aka: Training-Deployment Skew 
   - note: 
     * sometimes mixed in with or even called "data drift"
@@ -568,11 +587,207 @@ End: 1240
     * Google Health retinopathy classification model
       - trained on high-quality, well-lit images
       - deployed on dataset of varying image quality and lighting conditions
-* Concept Drift      
-    
+
+#### A Few More Thoughts on Data Drift
+The author doesn't dig into "gradual" vs "sudden" data drifts, though they do
+so for concept drifts (below).
+
+In their example, the gradual change in the `source_channel` classes from mostly
+"paid search" to mostly "Facebook" is an example of a gradual data drift.  
+
+This "gradual data drift" could
+have just as easily been portrayed as a "sudden data drift." For example,
+consider a company that builds a model for LinkedIn, which works well in
+production until it begins getting run for ad campaigns on TikTok as well several months
+later.  Considering the change in demographics here, I'd expect the data drift to be almost 
+immediately noticeable.  This might be considered a sudden data drift!
+
+Note that one might actually consider both of these examples a training/deployment
+skew problem, which the author tries to distinguish from "drift".  I now see why
+the author says that many people also refer to "training/deployment skew" as a 
+type of "data drift" -- seems they even do it in their own article!  And, actually,
+I think that's ok: it's better to have a term that generally refers to changes in 
+P(X) in general.  I'm fine with simply considering training/deployment skew as a 
+subtype of data drift instead of in a category of its own.  The above example
+shows that the distinction between general "drift" and the specific case of 
+"skew" isn't actually as clear as their section on skew makes it out to be.  
+
+In the above example, P(X) changed because the source of X was deliberately
+altered (from just `source_channel={"paid search"}` to
+`source_channel={"paid search"|"Facebook"}`); in turn, this change 
+then gradually affected the rest of the feature space, X, over time.
+
+One can also imagine data drift occurring even if they maintained a 
+static `source_channel` feature.  They give some examples of this: targeting
+new geographic regions or demographics.  These specific examples, though,
+are still examples of "intentional" or "deliberate" sources of data drift.  One
+can imagine the opposite too: "unintentional" sources of data drift stemming
+from some world event.  Such an unintentional source of data drift can also be
+further classified as "sudden" or "gradual".  
+
+
+The author does invoke unintentional sources of drift like this, but only in
+the section on concept drift.  
+
+Take their gradual concept example where a competitor launches a new product.
+* If the model is a sales forecast, then the customers now have another choice,
+  thus `P(sale|X)` might indeed change and this is a real concept drift that has
+  changed `X->Y`; their population might change in size but may remain statistically
+  similar.
+* However, assume the competitor product is targeted at a specific subpopulation (e.g., 
+  women); here again, the population size might noticeably change, but so too will
+  the feature distributions (e.g., sex, weight, height, preferences, etc). In this 
+  case, there is definitely concept drift (and ultimately data drfit) for the subpopulation 
+  of women, but no likely concept or data drift in the subpopulation
+  of men.  Here, the sales forecasts would suffer from the concept drift in women, but also
+  the data drift in the population as a whole.  An edge case can help clarify: assume all
+  women use the new competitor product, such that the company no longer attracts any 
+  new women customers; the update to this model to correct for concept drift is as 
+  simple as hard-coding P(sale|woman)=0; however, the model's performance would still
+  likely change (for better or worse) assuming that P(sale|man) has always been
+  associated with a different level of uncertainty than P(sale|woman), e.g., if the
+  uncertainty in P(sale|man) is 10xP(sale|woman), then the new forecasts will now
+  be 10x more uncertain in general.  This degradation of performance is from the 
+  remaining data drift that occurred.  (Right?!?! :-p) 
+
+I think what I'm pointing out here is that concept drift (i.e., changes in P(Y|X)) is 
+often, but now always, associated with changes P(X) as well (i.e., data drift).  The 
+distinction is only slight and, to my mind, seems to be dependent on the specifics of the data
+and the model being discussed.  The author even says at the end of the article:
+"In practice, the semantic distinction makes little difference. More often than not, 
+the drift will be combined and subtle."
+
+(This is really similar to the types of issues/lingo used in the transfer learning 
+stuff I did a while back...and I guess for good reason - it is essentially in the realm
+of domain adaptation.)
+
+But, still, there are certainly instances of "unintentional data drift" (changes in P(X)) without 
+concept drift (changes in P(Y|X)).
+
+For example (I wrote this in a note on "Data Quality" above), a HAR model's performance
+might change in step with sensor degradation on one's wearable (e.g., Fitbit or Apple
+Watch).  At the individual level this is certainly true, but one can also imagine this
+at the population level as well.  For example, say that 90% of all Apple Watch "N" sales
+occurred within the first 3 months of release and that Apple Watch "N+1" is not released
+for another 2 years. The demographic data here might not show any significant drifts
+over these couple of years, but it's easy to imagine (true or not) that the sensors can
+degrade quite a bit -- and with that degradation, HAR models might degrade as well.
+
+Another example simply comes from aging.  The Rolling Stones have had a solid, dedicated
+fanbase for decades.  Let's assume that the fanbase itself remained static over all those
+decades and, thus, that some of the feature space is static, but not all: any part of the 
+feature space directly or indirectly dependent on age will vary with age.  Thus, if the 
+Rolling Stones had trained models in the 70s that predicted things like "concert preferences" 
+(seating, standing room, etc) and optimal ticket prices, they would surely be losing a lot
+of money in 2020.  This is a demographic change, but not exactly an intentional one.
+
+Anyway...
+
+To recap some of these distinctions:
+* Data Drift
+  - Deliberate/Intentional
+    * Sudden
+    * Gradual
+  - Natural/Unintentional
+    * Sudden
+    * Gradual 
+
+This naming scheme can be a bit misleading though, e.g., the training/deployment
+skew problem is a a type of "sudden drift" (despite the author of the article wanting to
+distinguish it as a "skew" instead of "drift"), but it could be confusing to call
+it "deliberate" or "intentional" since the people responsible might not have known
+anything about training/deployment skew and consider their mistake to be 
+"whoopsie-daisy unintentional!"
+
+But anyway, what naming scheme is perfert...?
 
 
 
 
+### Concept Drift (Changes in the X->Y Relationships)
+* Concept Drift     
+  - primary gist: "Concept drift occurs when the patterns the model learned no longer hold."
+    * i.e.: "In contrast to the data drift, the distributions (such as user demographics, 
+      frequency of words, etc.) might even remain the same. Instead, the relationships between 
+      the model inputs and outputs change."
+    * i.e.: "the very meaning of what we are trying to predict evolves."
+* Gradual Concept Drift
+  - primary gist: "the world slowly changes and the model does not"   
+  - given examples:
+    * competitor launches a new product
+      - consumers now have more choices
+      - more choices lead to behavioral changes 
+      - behavior changes lead to changes in sales, S(Y|X)
+      - the sales forecast model, P(Y|X), must be updated/retrained to match the 
+        evolution in S(Y|X)
+    * macroeconomic conditions evolve
+    * mechanical wear of equipment
+      - "Under the same process parameters, the patterns are now slightly different. It 
+        affects quality prediction models in manufacturing."
+      - Interestingly, this sounds a lot like my "sensor degradation / HAR" example given above
+        for gradual data drift (as a wearable sensor degrades, the quality of its data X degrades
+        (which can be interpreted as a shift in the data distribution), which results in a degradation 
+        of M(Y|X)==P(Y|X).....)
+  - Solutions
+    * For supervised models with a decent amount of historical data: 
+      - Initial Estimates: "If we are building a supervised prediction model, we know the past ground 
+        truth. We can train the model on older data and apply it to later periods. Then we can imitate 
+        model retraining with different frequencies and measure how it impacts model quality."
+      - Updated Estimates:  Make sure to monitor performance in deployment and to reassess retraining
+        intervals, etc.
+* Sudden Concept Drift         
+  - primary gist: "the world suddenly changes and the model does not"
+  - given examples:
+    * covid 19
+      - e.g., impacts on mobility, shopping patterns, demand forecasting, hospitalization forecasts, etc
+      - even less obvious models were affected: e.g., computer vision models for predicting pneumonia
+        from x-ray images
+    * changes in the interest rate by the central bank
+    * technical revamp of the product line
+      - "Predictive maintenance becomes obsolete since modified equipment has new failure modes (or lack of those)."
+    * Major update in the app interface
+* Recurring Concept Drift
+  - aka: Seasonality
+    * one might also see it called: Seasonal Concept Drift, Deterministic Concept Drift
+  - note: this is your more classic "seasonality" issue from time series modeling; the 
+    author does not consider this a true example of "drift" or "model decay," but instead
+    an example of a shitty model since "seasonality is a known modeling concept," should be
+    anticipated by the modeler (if applicable), and that a "sound model" should be 
+    able to "react to these patterns" by design
+    * *"Weekends happen every week, and we don’t need an alert. Unless we see a new pattern, of course."*
+  - Solutions
+    - build seasonality into the model
+    - "If needed, domain experts can help to add manual post-processing rules or corrective 
+      coefficients on top of the model output."
 
 
+### Dealing with Drift
+
+* For a model that isn't extremely mission-critical or difficult to manually override:
+  - can wait for more data to be collected
+  - use expert rules or heuristics as a fallback strategy
+* For models in general, try one or more data-oriented retraining strategies
+  - Everything Unweighted:  "Retrain the model using all available data, both before and after the change."
+  - Everything, but Weighted for Recency: "Use everything, but assign higher weights to the new data so that 
+    model gives priority to the recent patterns."
+  - Recent Only: "If enough new data is collected, we can simply drop the past."
+* If a simple data-oriented retraining does not work
+  - a more rigorous hyperparameter/architecture search might work, including (but not limited to):
+    * domain adaptation strategies
+    * model stacking/composition using both old and new models
+    * new data sources
+    * new architectures
+  - a change of model scope or business process might be best
+    * shorten the prediction horizon (e.g., from a week to a day)
+    * increase frequency of model runs (e.g., from weekly to daily)
+  
+  
+  
+====================================================================================
+
+
+
+Start: noon
+End: 1240
+Start: 1257
+End: 306
