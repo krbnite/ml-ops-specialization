@@ -936,3 +936,16 @@ issues and helps diagnose their root cause to debug and resolve.
 * Check #1. Monitor the performance changes
 * Check #2. Monitor the shifts in data
 * Part 3. Retraining vs Updates
+
+
+==============================================================
+
+
+# Suggested Papers
+
+[ ] ToDo: Read these!
+
+* 2020: Konstantinos et al: [Towards ML Engineering: A brief history of TensorFlow Extended (TFX)](http://arxiv.org/abs/2010.02013)
+* 2020: Paleyes et al: [Challenges in deploying machine learning: A survey of case studies](http://arxiv.org/abs/2011.09926)
+* Sculley et al:  [Hidden technical debt in machine learning systems](https://papers.nips.cc/paper/2015/file/86df7dcfd896fcaf2674f757a2463eba-Paper.pdf)
+
